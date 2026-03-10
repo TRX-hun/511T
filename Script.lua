@@ -1,27 +1,33 @@
+-- [[ TRX TIME TRACKER ]] --
+local DataStoreService = game:GetService("DataStoreService")
+local PointsStore = DataStoreService:GetDataStore("PlayerPointsV1")
 local Players = game:GetService("Players")
 
--- جدول لتخزين وقت دخول كل لاعب
-local joinTimes = {}
+local loginTimes = {}
+
+-- وظيفة حفظ الوقت
+local function saveTime(player)
+    if loginTimes[player.UserId] then
+        local duration = os.time() - loginTimes[player.UserId]
+        local success, currentPoints = pcall(function() return PointsStore:GetAsync(tostring(player.UserId)) or 0 end)
+        if success then
+            PointsStore:SetAsync(tostring(player.UserId), currentPoints + duration)
+        end
+    end
+end
 
 Players.PlayerAdded:Connect(function(player)
-	-- تسجيل وقت الدخول عند دخول اللاعب
-	joinTimes[player.UserId] = os.time()
-	print(player.Name .. " دخل في: " .. os.date("%X", joinTimes[player.UserId]))
+    loginTimes[player.UserId] = os.time()
+    
+    -- إنشاء واجهة بسيطة لكل لاعب
+    local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+    local label = Instance.new("TextLabel", gui)
+    label.Size = UDim2.new(0, 200, 0, 50)
+    label.Position = UDim2.new(0.5, -100, 0, 10)
+    label.Text = "TRX SYSTEM: Tracking..."
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	local joinTime = joinTimes[player.UserId]
-	if joinTime then
-		local duration = os.time() - joinTime -- حساب المدة بالثواني
-		
-		-- تحويل الثواني إلى ساعات ودقائق وثواني
-		local hours = math.floor(duration / 3600)
-		local minutes = math.floor((duration % 3600) / 60)
-		local seconds = duration % 60
-		
-		print(player.Name .. " قضى وقت: " .. hours .. " ساعة، " .. minutes .. " دقيقة، " .. seconds .. " ثانية")
-		
-		-- هنا يمكنك إرسال هذه البيانات إلى واجهة المستخدم (GUI) الخاصة بك
-		joinTimes[player.UserId] = nil -- مسح البيانات بعد خروج اللاعب
-	end
+    saveTime(player)
+    loginTimes[player.UserId] = nil
 end)
